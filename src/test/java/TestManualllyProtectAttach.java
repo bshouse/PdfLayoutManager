@@ -1,4 +1,4 @@
-// Copyright 2013-03-13 PlanBase Inc. & Glen Peterson
+// Copyright 2013-03-13 PlanBase Inc. & Glen Peterson & B. Shouse
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,9 +17,6 @@ import com.planbase.pdf.layoutmanager.CellStyle;
 import com.planbase.pdf.layoutmanager.LogicalPage;
 import com.planbase.pdf.layoutmanager.PdfLayoutMgr;
 import com.planbase.pdf.layoutmanager.TextStyle;
-import com.planbase.pdf.layoutmanager.XyOffset;
-
-import org.apache.pdfbox.pdmodel.PDDocumentNameDictionary;
 import org.apache.pdfbox.pdmodel.PDEmbeddedFilesNameTreeNode;
 import org.apache.pdfbox.pdmodel.common.filespecification.PDComplexFileSpecification;
 import org.apache.pdfbox.pdmodel.common.filespecification.PDEmbeddedFile;
@@ -28,6 +25,7 @@ import org.apache.pdfbox.pdmodel.encryption.StandardProtectionPolicy;
 import org.apache.pdfbox.pdmodel.font.PDType1Font;
 import org.junit.Test;
 
+import java.awt.Color;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -36,16 +34,10 @@ import java.io.OutputStream;
 import java.util.GregorianCalendar;
 import java.util.HashMap;
 import java.util.Map;
-import java.awt.Color;
 
 public class TestManualllyProtectAttach {
 
-//    public static void main(String... args) throws IOException, COSVisitorException {
-//        new TestManualllyPdfLayoutMgr().testPdf();
-//    }
-
-    @Test
-    public void testProtectAttach() throws IOException {
+    @Test public void testProtectAttach() throws IOException {
         // Nothing happens without a PdfLayoutMgr.
         PdfLayoutMgr pageMgr = PdfLayoutMgr.newRgbPageMgr();
 
@@ -57,8 +49,14 @@ public class TestManualllyProtectAttach {
 
 
         // Include a simple description
-        Cell protectAttach = Cell.builder(CellStyle.DEFAULT, lp.pageWidth()-100f).textStyle(TextStyle.of(PDType1Font.HELVETICA, 12f, Color.BLACK)).addStrs("This document should be protected against writing","Check the document properties for Security.","It should be password protected with 40-bit encryption","There should also be a PNG image attached.").build();
-        XyOffset xya = lp.putCell(20f, lp.yPageTop(), protectAttach);
+        Cell protectAttach = Cell.builder(CellStyle.DEFAULT, lp.pageWidth()-100f)
+                                 .textStyle(TextStyle.of(PDType1Font.HELVETICA, 12f, Color.BLACK))
+                                 .addStrs("This document should be protected against writing",
+                                          "Check the document properties for Security.",
+                                          "It should be password protected with 40-bit encryption",
+                                          "There should also be a PNG image attached.")
+                                 .build();
+        lp.putCell(20f, lp.yPageTop(), protectAttach);
         
         lp.commit();
         
@@ -66,7 +64,7 @@ public class TestManualllyProtectAttach {
         AccessPermission ap = new AccessPermission();
         ap.setCanModify(false);
         
-        // Setup a protection policy
+        // Setup a protection policy with the password, "ownerPassword"
         StandardProtectionPolicy sp = new StandardProtectionPolicy("ownerPassword","",ap);
         
         // Apply protection
@@ -89,21 +87,9 @@ public class TestManualllyProtectAttach {
         pf.setEmbeddedFile(ef);
         efMap.put("Picture", pf);
         efTree.setNames(efMap);
-        PDDocumentNameDictionary dict = new PDDocumentNameDictionary(pageMgr.getDocumentCatalog());
-        dict.setEmbeddedFiles(efTree);
-        pageMgr.getDocumentCatalog().setNames(dict);
+        pageMgr.setEmbeddedFilesOnDict(efTree);
 
         // All done - write it out!
-
-        // In a web application, this could be:
-        //
-        // httpServletResponse.setContentType("application/pdf") // your server may do this for you.
-        // os = httpServletResponse.getOutputStream()            // you probably have to do this
-        //
-        // Also, in a web app, you probably want name your action something.pdf and put
-        // target="_blank" on your link to the PDF download action.
-
-        // We're just going to write to a file.
         OutputStream os = new FileOutputStream("testProtectAttach.pdf");
 
         // Commit it to the output stream!
